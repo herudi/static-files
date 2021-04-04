@@ -61,7 +61,7 @@ function _next(req: Request, err?: any) {
     req.respond({ status, body });
 }
 
-async function existFile(filename: string) {
+async function existStat(filename: string) {
     try {
         let stats: Deno.FileInfo = await Deno.stat(filename);
         return stats;
@@ -77,17 +77,23 @@ function headersEncoding(headers: Headers, name: string, pathFile: string, num: 
 
 async function sendFile(pathFile: string, opts: TOptions, req: Request, next: NextFunction) {
     let isDirectory = pathFile.slice((pathFile.lastIndexOf(".") - 1 >>> 0) + 2) === "";
+    let stats;
     if (opts.dotfiles === false) {
         let idx = req.url.indexOf('/.');
         if (idx !== -1) {
             if (!opts.fallthrough) {
-                return next(new Error(`File or directory ${pathFile} not found`));
+                return next(new Error(`File or directory ${req.url} not found`));
             }
             return next();
         }
     } else {
-        let exist = await existFile(pathFile);
-        isDirectory = exist?.isDirectory || false;
+        let exist = await existStat(pathFile);
+        if (exist) {
+            isDirectory = exist.isDirectory;
+            if (exist.isFile) stats = exist;
+        } else {
+            isDirectory = false;
+        }
     }
     if (isDirectory) {
         if (opts.redirect === true) {
@@ -95,7 +101,9 @@ async function sendFile(pathFile: string, opts: TOptions, req: Request, next: Ne
             pathFile += opts.index;
         }
     }
-    const stats = await Deno.stat(pathFile);
+    if (stats === void 0) {
+        stats = await Deno.stat(pathFile);
+    }
     let status = 200;
     const headers = new Headers();
     if (opts.setHeaders !== void 0) {
@@ -200,19 +208,19 @@ export default function staticFiles(
         } catch (err) {
             let exts = fromExtensions(req, opts);
             if (exts) {
-                let obj: any, i = 0, len = exts.length;
+                let stats: any, i = 0, len = exts.length;
                 for (; i < len; i++) {
                     const ext = exts[i];
                     const newPathFile = pathFile + '.' + ext;
-                    obj = await existFile(newPathFile);
-                    if (obj !== null) {
-                        obj.pathFile = newPathFile;
+                    stats = await existStat(newPathFile);
+                    if (stats !== null) {
+                        stats.pathFile = newPathFile;
                         break;
                     };
                 }
-                if (obj && obj.pathFile) {
+                if (stats && stats.pathFile) {
                     try {
-                        await sendFile(obj.pathFile, opts, req, next);
+                        await sendFile(stats.pathFile, opts, req, next);
                         return;
                     } catch (_err) {
                         if (!opts.fallthrough) return next(_err);
