@@ -97,7 +97,7 @@ async function sendFile(pathFile: string, opts: TOptions, req: Request, next: Ne
     }
     if (isDirectory) {
         if (opts.redirect === true) {
-            if (pathFile.lastIndexOf('/') === -1) pathFile += '\\';
+            if (pathFile.lastIndexOf('/') === -1) pathFile += '/';
             pathFile += opts.index;
         }
     }
@@ -109,7 +109,7 @@ async function sendFile(pathFile: string, opts: TOptions, req: Request, next: Ne
     if (opts.setHeaders !== void 0) {
         opts.setHeaders(headers, pathFile, stats);
     }
-    headers.set("Content-Type", headers.get("Content-Type") || (contentType(pathFile) || "application/octet-stream"));
+    headers.set("Content-Type", headers.get("Content-Type") || (contentType(pathFile.replace("/", "\\")) || "application/octet-stream"));
     if (opts.gzip || opts.brotli) {
         headers.set('Vary', 'Accept-Encoding');
         let xgz = pathFile.lastIndexOf('.gz');
