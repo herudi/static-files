@@ -1,11 +1,18 @@
 import { fromFileUrl, join } from "https://deno.land/std/path/mod.ts";
 import { contentType } from "https://deno.land/x/media_types/mod.ts";
 
-interface Request {
+interface Req {
     [key: string]: any;
 }
-interface Response {
+interface Res {
     [key: string]: any;
+}
+const getUrl = (req: Req) => req.url.startsWith('http') ? req.originalUrl : req.url;
+const respond = (req: Req, res: any) => {
+    if (req.respond === void 0 && req.url.startsWith('http')) {
+        req.respond = ({ body, status, headers }: any) => res(new Response(body, { status, headers }))
+    }
+    return req.respond;
 }
 type TOptions = {
     maxAge?: number;
@@ -27,14 +34,9 @@ type TOptions = {
 }
 type NextFunction = (err?: any) => void;
 
-function parseurl(req: Request, isOriginal = false): any {
-    let str: any = req.url,
+function parseurl(req: Req): any {
+    let str: any = getUrl(req),
         url = req._parsedUrl;
-    if (isOriginal) {
-        str = req.originalUrl;
-        if (typeof str !== "string") return parseurl(req);
-        url = req._parsedOriginalUrl;
-    }
     if (url && url._raw === str) return url;
     let pathname = str, query = null, search = null, i = 0, len = str.length;
     while (i < len) {
@@ -51,14 +53,14 @@ function parseurl(req: Request, isOriginal = false): any {
     url.pathname = pathname;
     url.query = query;
     url.search = search;
-    return isOriginal ? (req._parsedOriginalUrl = url) : (req._parsedUrl = url);
+    return (req._parsedUrl = url);
 }
 
-function _next(req: Request, err?: any) {
-    let body = err ? (err.stack || "Something went wrong") : `File or directory ${req.url} not found`;
+function _next(req: Req, res: Res, err?: any) {
+    let body = err ? (err.stack || "Something went wrong") : `File or directory ${getUrl(req)} not found`;
     let status = err ? (err.status || err.code || err.statusCode || 500) : 404;
     if (typeof status !== "number") status = 500;
-    req.respond({ status, body });
+    respond(req, res)({ status, body });
 }
 
 async function existStat(filename: string) {
@@ -75,14 +77,14 @@ function headersEncoding(headers: Headers, name: string, pathFile: string, num: 
     headers.set("Content-Type", contentType(pathFile.substring(0, num)) || "");
 }
 
-async function sendFile(pathFile: string, opts: TOptions, req: Request, next: NextFunction) {
+async function sendFile(pathFile: string, opts: TOptions, req: Req, res: Res, next: NextFunction) {
     let isDirectory = pathFile.slice((pathFile.lastIndexOf(".") - 1 >>> 0) + 2) === "";
     let stats;
     if (opts.dotfiles === false) {
-        let idx = req.url.indexOf('/.');
+        let idx = getUrl(req).indexOf('/.');
         if (idx !== -1) {
             if (!opts.fallthrough) {
-                return next(new Error(`File or directory ${req.url} not found`));
+                return next(new Error(`File or directory ${getUrl(req)} not found`));
             }
             return next();
         }
@@ -129,7 +131,7 @@ async function sendFile(pathFile: string, opts: TOptions, req: Request, next: Ne
         let end = opts.end || stats.size - 1;
         if (start >= stats.size || end >= stats.size) {
             headers.set("Content-Range", `bytes */${stats.size}`);
-            return req.respond({ status: 416, body: "", headers });
+            return respond(req, res)({ status: 416, body: "", headers });
         }
         headers.set("Content-Range", `bytes ${start}-${end}/${stats.size}`);
         headers.set("Content-Length", (end - start + 1).toString());
@@ -143,13 +145,13 @@ async function sendFile(pathFile: string, opts: TOptions, req: Request, next: Ne
     }
     if (opts.etag === true) {
         headers.set("ETag", `W/"${stats.size}-${stats.mtime?.getTime()}"`);
-        if (req.headers.get("if-none-match") === headers.get("ETag")) return req.respond({ status: 304 });
+        if (req.headers.get("if-none-match") === headers.get("ETag")) return respond(req, res)({ status: 304 });
     }
     const body = await Deno.readFile(pathFile);
-    return req.respond({ status, body, headers });
+    return respond(req, res)({ status, body, headers });
 }
 
-function fromExtensions(req: Request, opts: TOptions) {
+function fromExtensions(req: Req, opts: TOptions) {
     if (opts.extensions === void 0) return null;
     let exts = opts.extensions;
     let gzips = opts.gzip && exts.map(x => `${x}.gz`).concat('gz');
@@ -187,24 +189,23 @@ export default function staticFiles(
     }
     const rootPath = root.startsWith("file:") ? fromFileUrl(root) : root;
     return async function (
-        req: Request,
-        res: Response = {},
+        req: Req,
+        res: Res = {},
         next?: NextFunction
     ) {
-        if (next === void 0) next = (err?: any) => _next(req, err);
+        if (next === void 0) next = (err?: any) => _next(req, res, err);
         if (req.method !== "GET" && req.method !== "HEAD") {
             if (opts.fallthrough) return next();
             const headers = new Headers();
             headers.set("Allow", "GET, HEAD");
             headers.set("Content-Length", "0");
-            return req.respond({ status: 405, body: "", headers });
+            return respond(req, res)({ status: 405, body: "", headers });
         }
-        const originalUrl = parseurl(req, true);
         let path = parseurl(req).pathname;
-        if (path === "/" && originalUrl.pathname.substr(-1) !== "/") path = "";
+        if (path === "/") path = "";
         let pathFile: string = decodeURIComponent(join(rootPath, path));
         try {
-            await sendFile(pathFile, opts, req, next);
+            await sendFile(pathFile, opts, req, res, next);
         } catch (err) {
             let exts = fromExtensions(req, opts);
             if (exts) {
@@ -220,7 +221,7 @@ export default function staticFiles(
                 }
                 if (stats && stats.pathFile) {
                     try {
-                        await sendFile(stats.pathFile, opts, req, next);
+                        await sendFile(stats.pathFile, opts, req, res, next);
                         return;
                     } catch (_err) {
                         if (!opts.fallthrough) return next(_err);
