@@ -4,51 +4,68 @@
 
 Serve Static for Deno inspired by [serve-static](https://github.com/expressjs/serve-static) and [sirv](https://github.com/lukeed/sirv)
 
+## Installation
+```ts
+// deno.land
+import staticFiles from "https://deno.land/x/static_files@1.0.3/mod.ts";
+
+// nest.land
+import staticFiles from "https://x.nest.land/static_files@1.0.3/mod.ts";
+```
 ## Usage
 ```ts
 import { serve } from "https://deno.land/std/http/server.ts";
-import staticFiles from "https://deno.land/x/static_files@1.0.2/mod.ts";
+import staticFiles from "https://deno.land/x/static_files@1.0.3/mod.ts";
 
-const staticServer = staticFiles('public');
 const server = serve({ port: 3000 });
 for await (const req of server) {
-    staticServer(req);
-    // or
-    // staticServer(req, res, next);
-    // or
-    // staticServer(req, undefined, next);
+    staticFiles('public')(req);
 }
 ```
-## Usage with Dero
+## Usage with NHttp
 ```ts
-import { dero } from "https://deno.land/x/dero@0.2.8/mod.ts";
-import staticFiles from "https://deno.land/x/static_files@1.0.2/mod.ts";
+import { NHttp } from "https://deno.land/x/nhttp/mod.ts";
+import staticFiles from "https://deno.land/x/static_files@1.0.3/mod.ts";
 
-dero.use(staticFiles("public")).listen(3000);
+const app = new NHttp();
+
+app.use(staticFiles("public"));
+
+app.listen(3000);
 
 ```
+
 ## Usage with Oak
 ```ts
 import { Application } from "https://deno.land/x/oak/mod.ts";
-import staticFiles from "https://deno.land/x/static_files@1.0.2/mod.ts";
+import staticFiles from "https://deno.land/x/static_files@1.0.3/mod.ts";
 
 const app = new Application();
-const serveStatic = staticFiles("public");
 
-app.use((ctx, next) => serveStatic(ctx.request.serverRequest, undefined, next));
+app.use(staticFiles("public"));
 
 await app.listen({ port: 3000 });
 ```
 ## Usage with Opine
 ```ts
-import { opine } from "https://deno.land/x/opine@0.23.1/mod.ts";
-import staticFiles from "https://deno.land/x/static_files@1.0.2/mod.ts";
+import { opine } from "https://deno.land/x/opine/mod.ts";
+import staticFiles from "https://deno.land/x/static_files@1.0.3/mod.ts";
 
 const app = opine();
 
 app.use(staticFiles("public"));
 
 app.listen(3000);
+```
+## Usage with Dero
+```ts
+import { dero } from "https://deno.land/x/dero/mod.ts";
+import staticFiles from "https://deno.land/x/static_files@1.0.3/mod.ts";
+
+dero.use(staticFiles("public"));
+
+dero.listen(3000);
+
 ```
 
 ## staticFiles(root, opts)
@@ -101,20 +118,15 @@ Enable or disable setting brotli. if true the headers send Vary to Accept-Encodi
 ## Example force download
 ```ts
 import { serve } from "https://deno.land/std/http/server.ts";
-import staticFiles from "https://deno.land/x/static_files@1.0.2/mod.ts";
+import staticFiles from "https://deno.land/x/static_files@1.0.3/mod.ts";
 
 function setHeaders(headers: Headers, path: string, stats: Deno.FileInfo) {
     headers.set("Content-disposition", "attachment; filename=" + path);
 }
-let staticServer = staticFiles('assets', { setHeaders });
 
 const server = serve({ port: 3000 });
 for await (const req of server) {
-    staticServer(req);
-    // or
-    // staticServer(req, res, next);
-    // or
-    // staticServer(req, undefined, next);
+    staticFiles('assets', { setHeaders })(req);
 }
 ```
 

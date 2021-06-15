@@ -1,0 +1,20 @@
+{
+  "$schema": "https://x.nest.land/eggs@0.3.6/src/schema.json",
+  "name": "static_files",
+  "entry": "./mod.ts",
+  "description": "Serve Static for Deno inspired by serve-static and sirv.",
+  "homepage": "https://github.com/herudi/static-files",
+  "stable": true,
+  "version": "1.0.3",
+  "files": [
+    "./mod.ts",
+    "LICENCE",
+    "README.md"
+  ],
+  "ignore": [],
+  "checkFormat": false,
+  "checkTests": false,
+  "checkInstallation": false,
+  "check": true,
+  "unlisted": false
+}
