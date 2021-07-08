@@ -1,28 +1,6 @@
-import { fromFileUrl, join } from "https://deno.land/std@0.92.0/path/mod.ts";
-import { contentType } from "https://deno.land/x/media_types@v2.7.1/mod.ts";
-
-interface AnyReq {
-  [key: string]: any;
-}
-type TOptions = {
-  maxAge?: number;
-  index?: string;
-  fallthrough?: boolean;
-  etag?: boolean;
-  extensions?: string[];
-  acceptRanges?: boolean;
-  cacheControl?: boolean;
-  lastModified?: boolean;
-  setHeaders?: (headers: Headers, path: string, stats: Deno.FileInfo) => void;
-  start?: number;
-  end?: number;
-  immutable?: boolean;
-  dotfiles?: boolean;
-  brotli?: boolean;
-  gzip?: boolean;
-  redirect?: boolean;
-};
-type NextFunction = (err?: any) => void;
+import { contentType, fromFileUrl, join } from "./src/deps.ts";
+import { staticFetch } from "./src/fetch.ts";
+import { AnyReq, NextFunction, TOptions } from "./src/types.ts";
 
 function parseurl(req: AnyReq): any {
   let str: any = req.url,
@@ -174,8 +152,7 @@ function fromExtensions(req: AnyReq, opts: TOptions) {
   return newExts;
 }
 
-export default function staticFiles(root: string, opts: TOptions = {}) {
-  if (!root) throw new TypeError("root path required");
+export default function staticFiles(root: string = "", opts: TOptions = {}) {
   if (typeof root !== "string") {
     throw new TypeError("root path must be a string");
   }
@@ -189,6 +166,7 @@ export default function staticFiles(root: string, opts: TOptions = {}) {
   opts.redirect = opts.redirect !== false;
   // false default
   opts.dotfiles = !!opts.dotfiles;
+  opts.fetch = !!opts.fetch;
   opts.immutable = !!opts.immutable;
   opts.brotli = !!opts.brotli;
   opts.gzip = !!opts.gzip;
@@ -196,6 +174,7 @@ export default function staticFiles(root: string, opts: TOptions = {}) {
   if (opts.setHeaders && typeof opts.setHeaders !== "function") {
     throw new TypeError("option setHeaders must be function");
   }
+  if (opts.fetch) return staticFetch(root, opts);
   const rootPath = root.startsWith("file:") ? fromFileUrl(root) : root;
   return async function (req: AnyReq, ...args: any) {
     let res = args[0];

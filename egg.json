@@ -5,8 +5,9 @@
   "description": "Serve Static for Deno inspired by serve-static and sirv.",
   "homepage": "https://github.com/herudi/static-files",
   "stable": true,
-  "version": "1.0.3",
+  "version": "1.0.4",
   "files": [
+    "./src/**/*",
     "./mod.ts",
     "LICENCE",
     "README.md"
