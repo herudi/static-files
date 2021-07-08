@@ -29,10 +29,9 @@ export function staticFetch(root: string = "", opts: TOptions = {}) {
     }
     const url = new URL(req.request.url).pathname;
     try {
+      let isDirectory = url.slice((url.lastIndexOf(".") - 1 >>> 0) + 2) === "";
       let pathFile = root + url;
-      let isDirectory =
-        pathFile.slice((pathFile.lastIndexOf(".") - 1 >>> 0) + 2) === "";
-      if (isDirectory) {
+      if (isDirectory && opts.redirect) {
         if (pathFile[pathFile.length - 1] !== "/") pathFile += "/";
         pathFile += opts.index;
       }
@@ -73,9 +72,6 @@ export function staticFetch(root: string = "", opts: TOptions = {}) {
         headers.get("Content-Type") ||
           (contentType(ext) || "application/octet-stream"),
       );
-      if (opts.setHeaders !== void 0) {
-        opts.setHeaders(headers, pathFile);
-      }
       if (res.body) {
         const reader = readerFromStreamReader(res.body.getReader());
         const body = await readAll(reader);
