@@ -4,6 +4,7 @@ export interface AnyReq {
 export type TOptions = {
   maxAge?: number;
   index?: string;
+  prefix?: string;
   fallthrough?: boolean;
   etag?: boolean;
   extensions?: string[];

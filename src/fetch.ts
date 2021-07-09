@@ -1,36 +1,32 @@
 import { contentType, readAll, readerFromStreamReader } from "./deps.ts";
 import { AnyReq, TOptions } from "./types.ts";
-
-function _next(req: AnyReq, res: any, err?: any) {
-  let body = err
-    ? (err.stack || "Something went wrong")
-    : `File or directory ${req.url} not found`;
-  let status = err ? (err.status || err.code || err.statusCode || 500) : 404;
-  if (typeof status !== "number") status = 500;
-  req.respond({ status, body });
-}
+import { _next, modRequest } from "./utils.ts";
 
 export function staticFetch(root: string = "", opts: TOptions = {}) {
   return async (req: AnyReq, ...args: any) => {
-    let res = args[0];
-    let next = args[1] || args[0] || ((err?: any) => _next(req, res, err));
-    if (req.request) {
-      if (req.request.serverRequest) {
-        req = req.request?.serverRequest;
-      } else if (req.respondWith) {
-        req.method = req.request.method;
-        req.headers = req.request.headers;
-        req.respond = ({ body, headers, status }: any) =>
-          req.respondWith(new Response(body, { status, headers }));
+    modRequest(req);
+    const res = args[0];
+    const next = args[1] || args[0] || ((err?: any) => _next(req, res, err));
+    if (opts.prefix) {
+      if (req.url.includes(opts.prefix)) {
+        req.url = req.url.substring(opts.prefix.length);
+      } else {
+        return next();
       }
     }
-    if (req.respondWith === void 0) {
-      throw new TypeError("req.respondWith is not a function");
-    }
-    const url = new URL(req.request.url).pathname;
     try {
-      let isDirectory = url.slice((url.lastIndexOf(".") - 1 >>> 0) + 2) === "";
-      let pathFile = root + url;
+      if (opts.dotfiles === false) {
+        let idx = req.url.indexOf("/.");
+        if (idx !== -1) {
+          if (!opts.fallthrough) {
+            return next(new Error(`File or directory ${req.url} not found`));
+          }
+          return next();
+        }
+      }
+      let isDirectory =
+        req.url.slice((req.url.lastIndexOf(".") - 1 >>> 0) + 2) === "";
+      let pathFile = root + req.url;
       if (isDirectory && opts.redirect) {
         if (pathFile[pathFile.length - 1] !== "/") pathFile += "/";
         pathFile += opts.index;
@@ -41,12 +37,12 @@ export function staticFetch(root: string = "", opts: TOptions = {}) {
       if (opts.setHeaders !== void 0) {
         opts.setHeaders(headers, pathFile);
       }
-      if (opts.cacheControl) {
+      if (opts.cacheControl === true) {
         let _cache = `public, max-age=${opts.maxAge}`;
         if (opts.immutable) _cache += ", immutable";
         headers.set("Cache-Control", _cache);
       }
-      if (opts.etag) {
+      if (opts.etag === true) {
         if (res.headers.get("ETag")) {
           headers.set("ETag", res.headers.get("ETag") || "");
         } else if (res.headers.get("last-modified")) {
@@ -60,7 +56,7 @@ export function staticFetch(root: string = "", opts: TOptions = {}) {
           headers.set("ETag", `W/"${lm}"`);
         }
         if (req.headers.get("if-none-match") === headers.get("ETag")) {
-          return req.respond({ status: 304 });
+          return req.__respond({ status: 304 });
         }
       }
       if (req.headers.get("range")) {
@@ -75,7 +71,7 @@ export function staticFetch(root: string = "", opts: TOptions = {}) {
       if (res.body) {
         const reader = readerFromStreamReader(res.body.getReader());
         const body = await readAll(reader);
-        req.respond({ body, headers });
+        req.__respond({ body, headers });
       } else next();
     } catch (error) {
       next(error);
