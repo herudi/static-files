@@ -2,6 +2,8 @@ import { contentType, readAll, readerFromStreamReader } from "./deps.ts";
 import { AnyReq, TOptions } from "./types.ts";
 import { _next, modRequest } from "./utils.ts";
 
+const getSearch = (str: string) => str.indexOf("?", 1) !== -1 && str.split("?")[1];
+
 export function staticFetch(root: string = "", opts: TOptions = {}) {
   return async (req: AnyReq, ...args: any) => {
     modRequest(req);
@@ -27,11 +29,17 @@ export function staticFetch(root: string = "", opts: TOptions = {}) {
       let isDirectory =
         req.url.slice((req.url.lastIndexOf(".") - 1 >>> 0) + 2) === "";
       let pathFile = root + req.url;
+      let mySearch = "";
+      if (pathFile.indexOf("?", 1) !== -1) {
+        const [path, search] = pathFile.split("?");
+        pathFile = path;
+        mySearch = "?" + search;
+      }
       if (isDirectory && opts.redirect) {
         if (pathFile[pathFile.length - 1] !== "/") pathFile += "/";
         pathFile += opts.index;
       }
-      const res = await fetch(pathFile);
+      const res = await fetch(pathFile + mySearch);
       if (!res.ok) return next();
       const headers = new Headers();
       if (opts.setHeaders !== void 0) {
@@ -66,7 +74,7 @@ export function staticFetch(root: string = "", opts: TOptions = {}) {
       headers.set(
         "Content-Type",
         headers.get("Content-Type") ||
-          (contentType(ext) || "application/octet-stream"),
+        (contentType(ext) || "application/octet-stream"),
       );
       if (res.body) {
         const reader = readerFromStreamReader(res.body.getReader());
