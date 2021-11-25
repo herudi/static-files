@@ -53,6 +53,7 @@ export function headersEncoding(
 
 export async function sendFile(
   pathFile: string,
+	path: string,
   opts: TOptions,
   req: AnyReq,
   res: any,
@@ -95,7 +96,7 @@ export async function sendFile(
   headers.set(
     "Content-Type",
     headers.get("Content-Type") ||
-      (contentType(pathFile.replace("/", "\\")) || "application/octet-stream"),
+      (contentType(path.replace("/", "\\")) || "application/octet-stream"),
   );
   if (opts.gzip || opts.brotli) {
     headers.set("Vary", "Accept-Encoding");
