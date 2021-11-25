@@ -52,7 +52,7 @@ export default function staticFiles(root: string = "", opts: TOptions = {}) {
     if (path === "/") path = "";
     let pathFile: string = decodeURIComponent(join(rootPath, path));
     try {
-      await sendFile(pathFile, opts, req, res, next);
+      await sendFile(pathFile, path, opts, req, res, next);
     } catch (err) {
       let exts = fromExtensions(req, opts);
       if (exts) {
@@ -68,7 +68,7 @@ export default function staticFiles(root: string = "", opts: TOptions = {}) {
         }
         if (stats && stats.pathFile) {
           try {
-            await sendFile(stats.pathFile, opts, req, res, next);
+            await sendFile(stats.pathFile, path, opts, req, res, next);
             return;
           } catch (_err) {
             if (!opts.fallthrough) return next(_err);
