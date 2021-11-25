@@ -83,6 +83,7 @@ export async function sendFile(
     if (opts.redirect === true) {
       if (pathFile.lastIndexOf("/") === -1) pathFile += "/";
       pathFile += opts.index;
+      path = pathFile;
     }
   }
   if (stats === void 0) {
