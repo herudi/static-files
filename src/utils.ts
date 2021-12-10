@@ -53,7 +53,6 @@ export function headersEncoding(
 
 export async function sendFile(
   pathFile: string,
-	path: string,
   opts: TOptions,
   req: AnyReq,
   res: any,
@@ -83,7 +82,6 @@ export async function sendFile(
     if (opts.redirect === true) {
       if (pathFile.lastIndexOf("/") === -1) pathFile += "/";
       pathFile += opts.index;
-      path = pathFile;
     }
   }
   if (stats === void 0) {
@@ -97,7 +95,7 @@ export async function sendFile(
   headers.set(
     "Content-Type",
     headers.get("Content-Type") ||
-      (contentType(path.replace("/", "\\")) || "application/octet-stream"),
+    (contentType(pathFile.substring(pathFile.lastIndexOf('.') + 1)) || "application/octet-stream"),
   );
   if (opts.gzip || opts.brotli) {
     headers.set("Vary", "Accept-Encoding");
