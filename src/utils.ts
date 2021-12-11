@@ -55,7 +55,7 @@ export async function sendFile(
   pathFile: string,
   opts: TOptions,
   req: AnyReq,
-  res: any,
+  _: any,
   next: NextFunction,
 ) {
   let isDirectory =
