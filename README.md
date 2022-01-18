@@ -114,17 +114,19 @@ Give string prefix url. if prefix = "/assets", then /assets/yourfile.ext.
 
 ## Example force download
 ```ts
-import { serve } from "https://deno.land/std/http/server.ts";
+import { serve } from "https://deno.land/std@0.116.0/http/server.ts";
 import staticFiles from "https://deno.land/x/static_files@1.1.5/mod.ts";
 
 function setHeaders(headers: Headers, path: string, stats?: Deno.FileInfo) {
     headers.set("Content-disposition", "attachment; filename=" + path);
 }
 
-const server = serve({ port: 3000 });
-for await (const req of server) {
-    staticFiles('assets', { setHeaders })(req);
-}
+const serveFiles = (req: Request) => staticFiles('public', { setHeaders })({ 
+    request: req, 
+    respondWith: (r: Response) => r 
+})
+
+serve((req) => serveFiles(req), { addr: ':3000' });
 ```
 
 ## License
