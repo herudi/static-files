@@ -1,6 +1,8 @@
 import { contentType } from "./deps.ts";
 import { AnyReq, NextFunction, TOptions } from "./types.ts";
 
+const date = new Date();
+
 export function _next(req: AnyReq, _: any, err?: any) {
   let body = err
     ? (err.message || "Something went wrong")
@@ -83,11 +85,11 @@ export async function withSendFile(
     if (xgz !== -1) headersEncoding(headers, "gzip", pathFile, xgz);
     if (xbr !== -1) headersEncoding(headers, "br", pathFile, xbr);
   }
-  if (opts.lastModified === true && stats.mtime) {
-    headers.set("Last-Modified", stats.mtime.toUTCString());
+  if (opts.lastModified === true) {
+    headers.set("Last-Modified", (stats.mtime || date).toUTCString());
   }
   if (opts.acceptRanges === true) {
-    headers.set("Accept-Ranges", "bytes");
+    headers.set("Accept-Ranges", headers.get("Accept-Ranges") || "bytes");
   }
   if (req.headers.get("range")) {
     status = 206;
@@ -108,7 +110,7 @@ export async function withSendFile(
     headers.set("Cache-Control", _cache);
   }
   if (opts.etag === true) {
-    headers.set("ETag", `W/"${stats.size}-${stats.mtime?.getTime()}"`);
+    headers.set("ETag", `W/"${stats.size}-${(stats.mtime || date).getTime()}"`);
     if (req.headers.get("if-none-match") === headers.get("ETag")) {
       return req.__respond({ status: 304 });
     }
