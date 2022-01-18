@@ -1,7 +1,12 @@
 import { fromFileUrl, join } from "./src/deps.ts";
-import { staticFetch } from "./src/fetch.ts";
 import { AnyReq, TOptions } from "./src/types.ts";
-import { existStat, fromExtensions, modRequest, parseurl, sendFile, _next } from "./src/utils.ts";
+import {
+  _next,
+  existStat,
+  fromExtensions,
+  modRequest,
+  withSendFile as sendFile,
+} from "./src/utils.ts";
 
 export default function staticFiles(root: string = "", opts: TOptions = {}) {
   if (typeof root !== "string") {
@@ -20,7 +25,6 @@ export default function staticFiles(root: string = "", opts: TOptions = {}) {
   opts.redirect = opts.redirect !== false;
   // false default
   opts.dotfiles = !!opts.dotfiles;
-  opts.fetch = !!opts.fetch;
   opts.immutable = !!opts.immutable;
   opts.brotli = !!opts.brotli;
   opts.gzip = !!opts.gzip;
@@ -28,7 +32,6 @@ export default function staticFiles(root: string = "", opts: TOptions = {}) {
   if (opts.setHeaders && typeof opts.setHeaders !== "function") {
     throw new TypeError("option setHeaders must be function");
   }
-  if (opts.fetch) return staticFetch(root, opts);
   const rootPath = root.startsWith("file:") ? fromFileUrl(root) : root;
   return async function (req: AnyReq, ...args: any) {
     modRequest(req);
@@ -48,11 +51,11 @@ export default function staticFiles(root: string = "", opts: TOptions = {}) {
       headers.set("Content-Length", "0");
       return req.__respond({ status: 405, body: "", headers });
     }
-    let path = parseurl(req).pathname;
+    let path = req.path || (req.url || "").split("?")[0];
     if (path === "/") path = "";
     let pathFile: string = decodeURIComponent(join(rootPath, path));
     try {
-      const _body = await sendFile(pathFile, opts, req, res, next);;
+      const _body = await sendFile(pathFile, opts, req, res, next);
       return _body;
     } catch (err) {
       let exts = fromExtensions(req, opts);

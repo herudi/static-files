@@ -1,35 +1,13 @@
 import { contentType } from "./deps.ts";
 import { AnyReq, NextFunction, TOptions } from "./types.ts";
 
-export function parseurl(req: AnyReq): any {
-  let str: any = req.url,
-    url = req._parsedUrl;
-  if (url && url._raw === str) return url;
-  let pathname = str, query = null, search = null, i = 0, len = str.length;
-  while (i < len) {
-    if (str.charCodeAt(i) === 0x3f) {
-      pathname = str.substring(0, i);
-      query = str.substring(i + 1);
-      search = str.substring(i);
-      break;
-    }
-    i++;
-  }
-  url = {};
-  url.path = url._raw = url.href = str;
-  url.pathname = pathname;
-  url.query = query;
-  url.search = search;
-  return (req._parsedUrl = url);
-}
-
 export function _next(req: AnyReq, _: any, err?: any) {
   let body = err
     ? (err.message || "Something went wrong")
     : `File or directory ${req.url} not found`;
   let status = err ? (err.status || err.code || err.statusCode || 500) : 404;
   if (typeof status !== "number") status = 500;
-  req.__respond({ status, body });
+  return req.__respond({ status, body });
 }
 
 export async function existStat(filename: string) {
@@ -51,9 +29,9 @@ export function headersEncoding(
   headers.set("Content-Type", contentType(pathFile.substring(0, num)) || "");
 }
 
-export async function sendFile(
+export async function withSendFile(
   pathFile: string,
-  opts: TOptions,
+  opts: TOptions = {},
   req: AnyReq,
   _: any,
   next: NextFunction,
@@ -95,7 +73,8 @@ export async function sendFile(
   headers.set(
     "Content-Type",
     headers.get("Content-Type") ||
-    (contentType(pathFile.substring(pathFile.lastIndexOf('.') + 1)) || "application/octet-stream"),
+      (contentType(pathFile.substring(pathFile.lastIndexOf(".") + 1)) ||
+        "application/octet-stream"),
   );
   if (opts.gzip || opts.brotli) {
     headers.set("Vary", "Accept-Encoding");
