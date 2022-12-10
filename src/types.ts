@@ -5,6 +5,7 @@ export type TOptions = {
   maxAge?: number;
   index?: string;
   prefix?: string;
+  errorFile?: string | boolean;
   fallthrough?: boolean;
   etag?: boolean;
   extensions?: string[];

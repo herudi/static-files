@@ -78,6 +78,9 @@ Enable or disable setting for generate ETag. if true and if-none-match header ma
 ### extensions (string[] | undefined)
 Default: undefined;<br>
 Set file extension fallbacks. When set, if a file is not found, the given extensions will be added to the file name and search for. The first that exists will be served. Example: ['html', 'htm']. example: url /foo will force to file foo.html or foo.htm.
+### errorFile (string | boolean)
+Default: undefined;<br>
+Set default file on error. When set, if a file is not found, an error file is served.
 ### fallthrough (boolean)
 Default: true;<br>
 Set the middleware to have client errors fall-through as just unhandled requests, otherwise forward a client error. The difference is that client errors like a bad request or a request to a non-existent file will cause this middleware to simply next() to your next middleware when this value is true. When this value is false, these errors (even 404s), will invoke next(err).
