@@ -44,19 +44,13 @@ export default function staticFiles(root: string = "", opts: TOptions = {}) {
     const res = args[0];
     const next = args[1] || args[0] || ((err?: any) => _next(req, res, err));
     if (opts.prefix) {
-      console.log(
-        "Matching Static:",
-        req.url,
-        opts.prefix,
-        req.url.includes(opts.prefix),
-        typeof req.url
-      );
-      
-      if (req.url.includes(opts.prefix)) {
+      if (
+        new RegExp(`^${opts.prefix.split("/").filter(Boolean).join("/")}`).test(
+          req.url.split("/").filter(Boolean).join("/")
+        )
+      )
         req.url = req.url.substring(opts.prefix.length);
-      } else {
-        return next();
-      }
+      else return next();
     }
     if (req.method && req.method !== "GET" && req.method !== "HEAD") {
       if (opts.fallthrough) return next();
