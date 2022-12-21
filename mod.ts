@@ -48,7 +48,8 @@ export default function staticFiles(root: string = "", opts: TOptions = {}) {
         "Matching Static:",
         req.url,
         opts.prefix,
-        req.url.includes(opts.prefix)
+        req.url.includes(opts.prefix),
+        typeof req.url
       );
       
       if (req.url.includes(opts.prefix)) {
